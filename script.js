@@ -317,6 +317,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     newspaperPanel.style.width = `${100 / sceneScale}%`;
     newspaperPanel.style.height = `${100 / sceneScale}%`;
+    newspaperPanel.style.fontSize = `${16 / sceneScale}px`;
+    [11, 12, 13, 14, 15, 16, 20, 24, 36, 52].forEach((size) => {
+      newspaperPanel.style.setProperty(`--rp-font-${size}`, `${size / sceneScale}px`);
+    });
     newspaperPanel.style.transform = `scale(${sceneScale})`;
   }
 
