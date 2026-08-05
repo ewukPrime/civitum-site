@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#090b0c">
+  <title>CIVITUM — Launcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="stage">
+    <div id="sky" aria-hidden="true">
+      <canvas id="stars"></canvas>
+      <svg id="constellations" preserveAspectRatio="none"></svg>
+      <svg id="tac-grid" preserveAspectRatio="none"></svg>
+    </div>
+
+    <header id="topbar">
+      <div class="topbar-left">
+        <a class="home-button" href="#" aria-label="Главная">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 11 12 4l9 7"></path>
+            <path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"></path>
+          </svg>
+        </a>
+        <nav class="primary-nav" aria-label="Основная навигация">
+          <button type="button" data-focus-object="item-map">Карта</button>
+          <button type="button" data-focus-object="item-abacus">Магазин</button>
+          <button type="button" data-focus-object="item-book">Правила</button>
+          <button type="button" data-focus-object="item-newspaper">РП-посты</button>
+        </nav>
+      </div>
+
+      <div class="account-actions">
+        <button class="account-button account-button--ghost" type="button">Авторизация</button>
+        <button class="account-button" type="button">Профиль</button>
+      </div>
+    </header>
+
+    <section id="left-console" aria-label="Запуск и состояние сервера">
+      <div id="hero-content">
+        <h1 id="brand-title">CIVITUM</h1>
+        <button id="play-btn" type="button"><span>Играть</span></button>
+      </div>
+
+      <div id="infomers" aria-label="Состояние сервера">
+        <div class="infomer"><span class="status-dot"></span>ONLINE: 124/200</div>
+        <div class="infomer">TPS: 20.0</div>
+      </div>
+    </section>
+
+    <div id="objects" aria-label="Разделы сервера">
+      <button class="artifact map-object" id="item-map" type="button" aria-label="Открыть динамическую карту">
+        <span class="object-glow" aria-hidden="true"></span>
+        <span class="map-rope" aria-hidden="true"></span>
+        <img class="artifact-image" src="assets/tactical-map.png" alt="Тактическая карта Нормандии" draggable="false">
+        <span class="artifact-label">Динамическая карта</span>
+      </button>
+
+      <button class="artifact abacus-object" id="item-abacus" type="button" aria-label="Открыть магазин">
+        <span class="object-glow" aria-hidden="true"></span>
+        <img class="artifact-image" src="assets/abacus.png" alt="Старинные деревянные счёты" draggable="false">
+        <span class="artifact-label">Магазин</span>
+      </button>
+
+      <button class="artifact book-object" id="item-book" type="button" aria-label="Открыть правила">
+        <span class="object-glow" aria-hidden="true"></span>
+        <img class="artifact-image" src="assets/manual-book.png" alt="Полевой устав 1942 года" draggable="false">
+        <span class="artifact-label">Правила</span>
+      </button>
+
+      <button class="artifact newspaper-object" id="item-newspaper" type="button" aria-label="Открыть РП-посты">
+        <span class="object-glow" aria-hidden="true"></span>
+        <img class="artifact-image" src="assets/newspaper.png" alt="Газета о высадке в Нормандии" draggable="false">
+        <span class="artifact-label">РП-посты</span>
+      </button>
+    </div>
+
+    <div id="social" aria-label="Социальные сети">
+      <a class="social-button" href="#" aria-label="ВКонтакте">VK</a>
+      <a class="social-button" href="#" aria-label="Discord">DC</a>
+      <a class="social-button" href="#" aria-label="Telegram">TG</a>
+    </div>
+
+    <section id="newspaper-experience" aria-hidden="true">
+      <div class="rp-panel" role="dialog" aria-labelledby="rp-panel-title">
+        <div class="rp-panel-topline">
+          <button id="newspaper-back" type="button">← На главную</button>
+          <span>Полевой архив · выпуск № 18 734</span>
+        </div>
+
+        <header class="rp-panel-header">
+          <p>CIVITUM / общественная хроника</p>
+          <h2 id="rp-panel-title">РП-посты</h2>
+          <span>Сводки, события и документы игрового мира</span>
+        </header>
+
+        <div class="rp-controls">
+          <label class="rp-search">
+            <span>Поиск</span>
+            <input id="rp-search-input" type="search" placeholder="Найти публикацию…" autocomplete="off">
+          </label>
+
+          <div class="rp-filters" aria-label="Фильтр публикаций">
+            <button type="button" data-rp-filter="all" aria-pressed="true">Все</button>
+            <button type="button" data-rp-filter="reports" aria-pressed="false">Сводки</button>
+            <button type="button" data-rp-filter="events" aria-pressed="false">События</button>
+            <button type="button" data-rp-filter="admin" aria-pressed="false">Администрация</button>
+          </div>
+
+          <span id="rp-result-count">6 записей</span>
+        </div>
+
+        <div class="rp-feed" aria-live="polite">
+          <article class="rp-card" data-rp-category="reports">
+            <div class="rp-card-visual rp-card-visual--coast"><span>OMAHA</span></div>
+            <div class="rp-card-copy">
+              <div><span>Сводка</span><time datetime="1944-06-07">07.06.1944</time></div>
+              <h3>Береговой плацдарм удержан</h3>
+              <p>Штаб сообщает о восстановлении связи между передовыми подразделениями.</p>
+            </div>
+          </article>
+
+          <article class="rp-card" data-rp-category="events">
+            <div class="rp-card-visual rp-card-visual--convoy"><span>КОНВОЙ</span></div>
+            <div class="rp-card-copy">
+              <div><span>Событие</span><time datetime="1944-06-08">08.06.1944</time></div>
+              <h3>Ночной марш снабжения</h3>
+              <p>Колонна отправится от западного склада после наступления темноты.</p>
+            </div>
+          </article>
+
+          <article class="rp-card" data-rp-category="admin">
+            <div class="rp-card-visual rp-card-visual--orders"><span>ПРИКАЗ</span></div>
+            <div class="rp-card-copy">
+              <div><span>Администрация</span><time datetime="1944-06-09">09.06.1944</time></div>
+              <h3>Обновление полевого устава</h3>
+              <p>Опубликованы уточнения по взаимодействию гражданских и военных служб.</p>
+            </div>
+          </article>
+
+          <article class="rp-card" data-rp-category="reports">
+            <div class="rp-card-visual rp-card-visual--radio"><span>РАДИО</span></div>
+            <div class="rp-card-copy">
+              <div><span>Сводка</span><time datetime="1944-06-10">10.06.1944</time></div>
+              <h3>Восстановлена северная радиолиния</h3>
+              <p>Позывные сектора вновь доступны для зарегистрированных подразделений.</p>
+            </div>
+          </article>
+
+          <article class="rp-card" data-rp-category="events">
+            <div class="rp-card-visual rp-card-visual--city"><span>CIVITUM</span></div>
+            <div class="rp-card-copy">
+              <div><span>Событие</span><time datetime="1944-06-11">11.06.1944</time></div>
+              <h3>Городской совет собирает делегации</h3>
+              <p>Представители поселений приглашены обсудить порядок распределения ресурсов.</p>
+            </div>
+          </article>
+
+          <article class="rp-card" data-rp-category="admin">
+            <div class="rp-card-visual rp-card-visual--archive"><span>АРХИВ</span></div>
+            <div class="rp-card-copy">
+              <div><span>Администрация</span><time datetime="1944-06-12">12.06.1944</time></div>
+              <h3>Открыт приём полевых корреспондентов</h3>
+              <p>Редакция принимает хроники, фотографии и свидетельства участников событий.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="map-experience" aria-hidden="true">
+      <iframe
+        id="map-frame"
+        title="Интерактивная карта сервера"
+        srcdoc="<!doctype html><html lang='ru'><head><meta charset='utf-8'><style>*{box-sizing:border-box}html,body{height:100%;margin:0}body{display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 30% 20%,rgba(105,78,37,.19),transparent 36%),linear-gradient(135deg,#c7b47e,#a99360 48%,#c1ab72);color:#332917;font:600 14px 'Courier New',monospace;letter-spacing:.28em;text-transform:uppercase}body:before{content:'';position:fixed;inset:0;opacity:.17;background-image:repeating-linear-gradient(0deg,transparent 0 31px,rgba(64,51,30,.25) 32px),repeating-linear-gradient(90deg,transparent 0 31px,rgba(64,51,30,.2) 32px)}p{position:relative;padding:18px 24px;border:1px solid rgba(51,41,23,.28);background:rgba(222,205,157,.22)}</style></head><body><p>Интерактивная карта готова к подключению</p></body></html>">
+      </iframe>
+      <button id="map-back" type="button">← Назад</button>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
