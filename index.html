@@ -86,7 +86,7 @@
     </div>
 
     <section id="newspaper-experience" aria-hidden="true">
-      <div class="rp-panel" role="dialog" aria-labelledby="rp-panel-title">
+      <div class="rp-panel" role="dialog" aria-label="РП-посты">
         <div class="rp-panel-topline">
           <button id="newspaper-back" type="button">← На главную</button>
           <span>Полевой архив · выпуск № 18 734</span>
@@ -169,7 +169,36 @@
             </div>
           </article>
         </div>
+
       </div>
+
+      <div
+        id="rp-splitter"
+        class="rp-splitter"
+        role="separator"
+        aria-label="Изменить ширину окон"
+        aria-orientation="vertical"
+        aria-valuemin="30"
+        aria-valuemax="75"
+        aria-valuenow="70"
+        tabindex="0"
+      ></div>
+
+      <article id="rp-post-view" class="rp-post-view" aria-labelledby="rp-post-title" hidden>
+          <button id="rp-post-back" class="rp-post-back" type="button">← К списку публикаций</button>
+          <div class="rp-post-layout">
+            <div id="rp-post-visual" class="rp-post-visual"><span id="rp-post-visual-label"></span></div>
+            <div class="rp-post-content">
+              <div class="rp-post-meta">
+                <span id="rp-post-category"></span>
+                <time id="rp-post-date"></time>
+              </div>
+              <h2 id="rp-post-title"></h2>
+              <p id="rp-post-lead" class="rp-post-lead"></p>
+              <div id="rp-post-body" class="rp-post-body"></div>
+            </div>
+          </div>
+      </article>
     </section>
 
     <section id="map-experience" aria-hidden="true">

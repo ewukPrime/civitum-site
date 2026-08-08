@@ -307,6 +307,82 @@ document.addEventListener("DOMContentLoaded", () => {
   let newspaperTimeline = null;
   let newspaperOpenFloat = null;
   let newspaperIsTransitioning = false;
+  let newspaperRouteTimer = null;
+
+  const usesFileProtocol = window.location.protocol === "file:";
+
+  function isNewspaperRoute() {
+    if (usesFileProtocol) return /^#\/newspaper(?:\/[^/?#]+)?\/?$/.test(window.location.hash);
+    return /\/newspaper(?:\/[^/?#]+)?\/?$/.test(window.location.pathname);
+  }
+
+  function getRpPostSlugFromRoute() {
+    const route = usesFileProtocol ? window.location.hash : window.location.pathname;
+    const match = route.match(/\/newspaper\/([^/?#]+)\/?$/);
+
+    if (!match) return null;
+
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
+  }
+
+  function pushNewspaperRoute() {
+    const route = usesFileProtocol ? "#/newspaper" : "/newspaper";
+    window.history.pushState(
+      { ...window.history.state, civitumView: "newspaper", fromCivitumHome: true },
+      "",
+      route
+    );
+  }
+
+  function pushRpPostRoute(slug) {
+    const encodedSlug = encodeURIComponent(slug);
+    const route = usesFileProtocol
+      ? `#/newspaper/${encodedSlug}`
+      : `/newspaper/${encodedSlug}`;
+    const isSwitchingPost = Boolean(getRpPostSlugFromRoute());
+    const fromNewspaperList = isSwitchingPost
+      ? Boolean(window.history.state?.fromNewspaperList)
+      : isNewspaperRoute();
+    const historyMethod = isSwitchingPost ? "replaceState" : "pushState";
+
+    window.history[historyMethod](
+      {
+        ...window.history.state,
+        civitumView: "newspaper-post",
+        rpSlug: slug,
+        fromCivitumHome: false,
+        fromNewspaperList
+      },
+      "",
+      route
+    );
+  }
+
+  function replaceWithNewspaperListRoute() {
+    const route = usesFileProtocol ? "#/newspaper" : "/newspaper";
+
+    window.history.replaceState(
+      { ...window.history.state, civitumView: "newspaper", rpSlug: null, fromCivitumHome: false },
+      "",
+      route
+    );
+  }
+
+  function replaceWithHomeRoute() {
+    const route = usesFileProtocol
+      ? `${window.location.pathname}${window.location.search}`
+      : "/";
+
+    window.history.replaceState(
+      { ...window.history.state, civitumView: "home", fromCivitumHome: false },
+      "",
+      route
+    );
+  }
 
   /* Keep the RP interface visually identical at Full HD, 2K and 4K. */
   function syncNewspaperPanelScale() {
@@ -320,6 +396,7 @@ document.addEventListener("DOMContentLoaded", () => {
     newspaperPanel.style.fontSize = `${16 / sceneScale}px`;
     [11, 12, 13, 14, 15, 16, 20, 24, 36, 52].forEach((size) => {
       newspaperPanel.style.setProperty(`--rp-font-${size}`, `${size / sceneScale}px`);
+      newspaperExperience.style.setProperty(`--rp-font-${size}`, `${size / sceneScale}px`);
     });
     newspaperPanel.style.transform = `scale(${sceneScale})`;
   }
@@ -337,12 +414,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function openNewspaper() {
+  function openNewspaper(options = {}) {
+    const updateHistory = options?.updateHistory !== false;
+
     if (
       newspaperIsTransitioning ||
       document.body.classList.contains("newspaper-is-open") ||
       document.body.classList.contains("map-is-open")
     ) return;
+
+    if (updateHistory && !isNewspaperRoute()) pushNewspaperRoute();
 
     newspaperIsTransitioning = true;
     document.body.classList.add("newspaper-is-open");
@@ -372,16 +453,16 @@ document.addEventListener("DOMContentLoaded", () => {
       onComplete: () => {
         newspaperIsTransitioning = false;
         if (!reduceMotion) {
-          gsap.set(newspaperVisual, { y: -4 });
           newspaperOpenFloat = gsap.to(newspaperVisual, {
-            y: 5,
+            y: -5,
             duration: 3.25,
             ease: "sine.inOut",
             repeat: -1,
             yoyo: true
           });
         }
-        newspaperBack.focus({ preventScroll: true });
+        syncRpPostRoute(false);
+        if (!getRpPostSlugFromRoute()) newspaperBack.focus({ preventScroll: true });
       }
     });
 
@@ -390,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .to(newspaperItem.querySelector(".artifact-label"), { opacity: 0, duration: 0.2 }, 0)
       .to(newspaperItem.querySelector(".object-glow"), { opacity: 0, duration: 0.3 }, 0)
       .to(newspaperVisual, {
-        "--artifact-brightness": 0.68,
+        "--artifact-brightness": 0.58,
         duration: reduceMotion ? 0.01 : 0.42,
         ease: "power2.out"
       }, 0.04)
@@ -433,6 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gsap.set(newspaperFadeElements, { clearProps: "opacity,pointerEvents" });
         resumeArtifactMotion(newspaperMotion);
         playPulse?.resume();
+        hideRpPost(false);
         newspaperIsTransitioning = false;
         newspaperItem.focus({ preventScroll: true });
       }
@@ -452,15 +534,319 @@ document.addEventListener("DOMContentLoaded", () => {
       .to(newspaperFadeElements, { opacity: 1, duration: 0.46, stagger: 0.018 }, 0.38);
   }
 
+  function requestCloseNewspaper() {
+    if (newspaperIsTransitioning) return;
+
+    if (
+      isNewspaperRoute() &&
+      window.history.state?.civitumView === "newspaper" &&
+      window.history.state?.fromCivitumHome
+    ) {
+      window.history.back();
+      return;
+    }
+
+    if (isNewspaperRoute()) replaceWithHomeRoute();
+    closeNewspaper();
+  }
+
+  function syncNewspaperRoute() {
+    window.clearTimeout(newspaperRouteTimer);
+
+    if (newspaperIsTransitioning) {
+      newspaperRouteTimer = window.setTimeout(syncNewspaperRoute, 60);
+      return;
+    }
+
+    const shouldBeOpen = isNewspaperRoute();
+    const isOpen = document.body.classList.contains("newspaper-is-open");
+
+    if (shouldBeOpen && !isOpen) {
+      openNewspaper({ updateHistory: false });
+    } else if (!shouldBeOpen && isOpen) {
+      closeNewspaper();
+    } else if (shouldBeOpen && isOpen) {
+      syncRpPostRoute();
+    }
+  }
+
   newspaperItem.addEventListener("click", openNewspaper);
-  newspaperBack.addEventListener("click", closeNewspaper);
+  newspaperBack.addEventListener("click", requestCloseNewspaper);
+
+  const startedOnNewspaperRoute = isNewspaperRoute();
+  window.history.replaceState(
+    {
+      ...window.history.state,
+      civitumView: startedOnNewspaperRoute ? "newspaper-direct" : "home",
+      fromCivitumHome: false
+    },
+    "",
+    window.location.href
+  );
+
+  window.addEventListener("popstate", syncNewspaperRoute);
+  if (usesFileProtocol) window.addEventListener("hashchange", syncNewspaperRoute);
+
+  if (startedOnNewspaperRoute) {
+    window.requestAnimationFrame(() => openNewspaper({ updateHistory: false }));
+  }
 
   /* Working search and category filters inside the RP feed */
   const rpSearchInput = document.getElementById("rp-search-input");
   const rpFilterButtons = [...document.querySelectorAll("[data-rp-filter]")];
   const rpCards = [...document.querySelectorAll(".rp-card")];
   const rpResultCount = document.getElementById("rp-result-count");
+  const rpSplitter = document.getElementById("rp-splitter");
+  const rpPostView = document.getElementById("rp-post-view");
+  const rpPostBack = document.getElementById("rp-post-back");
+  const rpPostVisual = document.getElementById("rp-post-visual");
+  const rpPostVisualLabel = document.getElementById("rp-post-visual-label");
+  const rpPostCategory = document.getElementById("rp-post-category");
+  const rpPostDate = document.getElementById("rp-post-date");
+  const rpPostTitle = document.getElementById("rp-post-title");
+  const rpPostLead = document.getElementById("rp-post-lead");
+  const rpPostBody = document.getElementById("rp-post-body");
   let activeRpFilter = "all";
+  let rpSplitPercent = 70;
+  let activeSplitPointer = null;
+
+  function setRpSplitPercent(value) {
+    rpSplitPercent = Math.min(75, Math.max(30, value));
+    newspaperExperience.style.setProperty("--rp-left-width", `${rpSplitPercent.toFixed(2)}vw`);
+    rpSplitter.setAttribute("aria-valuenow", String(Math.round(rpSplitPercent)));
+    rpSplitter.setAttribute(
+      "aria-valuetext",
+      `Левое окно ${Math.round(rpSplitPercent)} процентов, правое ${Math.round(100 - rpSplitPercent)} процентов`
+    );
+  }
+
+  function setRpSplitFromPointer(event) {
+    const panelInset = newspaperExperience.getBoundingClientRect().left;
+    setRpSplitPercent(((event.clientX - panelInset) / window.innerWidth) * 100);
+  }
+
+  function finishRpSplit(event) {
+    if (event.pointerId !== activeSplitPointer) return;
+    if (rpSplitter.hasPointerCapture(event.pointerId)) {
+      rpSplitter.releasePointerCapture(event.pointerId);
+    }
+    activeSplitPointer = null;
+    document.body.classList.remove("rp-split-resizing");
+  }
+
+  rpSplitter.addEventListener("pointerdown", (event) => {
+    if (!newspaperExperience.classList.contains("is-reading") || window.innerWidth <= 1180) return;
+    activeSplitPointer = event.pointerId;
+    rpSplitter.setPointerCapture(event.pointerId);
+    document.body.classList.add("rp-split-resizing");
+    setRpSplitFromPointer(event);
+    event.preventDefault();
+  });
+
+  rpSplitter.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== activeSplitPointer) return;
+    setRpSplitFromPointer(event);
+  });
+
+  rpSplitter.addEventListener("pointerup", finishRpSplit);
+  rpSplitter.addEventListener("pointercancel", finishRpSplit);
+  rpSplitter.addEventListener("dblclick", () => setRpSplitPercent(70));
+  rpSplitter.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") {
+      setRpSplitPercent(rpSplitPercent - 2);
+    } else if (event.key === "ArrowRight") {
+      setRpSplitPercent(rpSplitPercent + 2);
+    } else if (event.key === "Home") {
+      setRpSplitPercent(30);
+    } else if (event.key === "End") {
+      setRpSplitPercent(75);
+    } else {
+      return;
+    }
+    event.preventDefault();
+  });
+
+  setRpSplitPercent(rpSplitPercent);
+
+  const rpPostRecords = [
+    {
+      slug: "beregovoy-platsdarm",
+      paragraphs: [
+        "После восстановления линий связи штаб подтвердил устойчивое положение передовых подразделений. Наблюдательные пункты продолжают передавать сведения о движении сил в прибрежном секторе.",
+        "Командирам предписано сохранять радиодисциплину и немедленно заносить изменения обстановки в полевой журнал."
+      ]
+    },
+    {
+      slug: "nochnoy-marsh-snabzheniya",
+      paragraphs: [
+        "Маршрут колонны проложен вдоль западного сектора. Движение начнётся после наступления темноты с соблюдением полного светомаскировочного режима.",
+        "Ответственные за сопровождение проверяют интервалы между машинами, запас топлива и готовность временных пунктов разгрузки."
+      ]
+    },
+    {
+      slug: "obnovlenie-polevogo-ustava",
+      paragraphs: [
+        "Новая редакция уточняет порядок взаимодействия гражданских служб, гарнизона и полевых администраций в районах совместного размещения.",
+        "Все подразделения должны ознакомиться с изменениями и передать подтверждение через установленный канал связи."
+      ]
+    },
+    {
+      slug: "severnaya-radioliniya",
+      paragraphs: [
+        "Северная радиолиния вновь принимает зарегистрированные позывные. Проведена проверка ретрансляторов и резервных источников питания.",
+        "При возникновении помех операторам следует перейти на запасную частоту и зафиксировать время переключения в журнале связи."
+      ]
+    },
+    {
+      slug: "gorodskoy-sovet",
+      paragraphs: [
+        "Представители поселений обсудят распределение продовольствия, топлива и строительных материалов между гражданскими районами.",
+        "Итоговый протокол заседания будет опубликован в общественной хронике после согласования делегациями."
+      ]
+    },
+    {
+      slug: "priem-polevyh-korrespondentov",
+      paragraphs: [
+        "Редакция открывает приём свидетельств участников событий, полевых заметок, фотографий и архивных документов.",
+        "Каждый материал проходит проверку перед публикацией. Автору необходимо указать место, дату и обстоятельства создания записи."
+      ]
+    }
+  ];
+
+  function showRpPost(card, animate = true) {
+    if (!card) return;
+
+    const slug = card.dataset.rpSlug;
+    const record = rpPostRecords.find((item) => item.slug === slug);
+    const visual = card.querySelector(".rp-card-visual");
+    const visualStyle = [...visual.classList].find((name) => name.startsWith("rp-card-visual--"));
+    const category = card.querySelector(".rp-card-copy > div span");
+    const date = card.querySelector("time");
+    const title = card.querySelector("h3");
+    const lead = card.querySelector("p");
+
+    rpPostVisual.className = `rp-post-visual${visualStyle ? ` ${visualStyle}` : ""}`;
+    rpPostVisualLabel.textContent = visual.textContent.trim();
+    rpPostCategory.textContent = category.textContent;
+    rpPostDate.textContent = date.textContent;
+    rpPostDate.dateTime = date.dateTime;
+    rpPostTitle.textContent = title.textContent;
+    rpPostLead.textContent = lead.textContent;
+    rpPostBody.replaceChildren();
+
+    (record?.paragraphs || [lead.textContent]).forEach((text) => {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = text;
+      rpPostBody.appendChild(paragraph);
+    });
+
+    newspaperPanel.classList.add("is-reading");
+    newspaperExperience.classList.add("is-reading");
+    rpCards.forEach((item) => {
+      const isActive = item === card;
+      item.classList.toggle("is-active", isActive);
+      if (isActive) {
+        item.setAttribute("aria-current", "page");
+      } else {
+        item.removeAttribute("aria-current");
+      }
+    });
+    rpPostView.hidden = false;
+    rpPostView.scrollTop = 0;
+
+    gsap.killTweensOf(rpPostView);
+    if (animate && !reduceMotion) {
+      gsap.fromTo(rpPostView, { opacity: 0, x: 96 }, { opacity: 1, x: 0, duration: 0.46, ease: "power3.out" });
+    } else {
+      gsap.set(rpPostView, { opacity: 1, x: 0 });
+    }
+
+    rpPostBack.focus({ preventScroll: true });
+  }
+
+  function hideRpPost(animate = true) {
+    if (rpPostView.hidden) {
+      newspaperPanel.classList.remove("is-reading");
+      newspaperExperience.classList.remove("is-reading");
+      rpCards.forEach((item) => {
+        item.classList.remove("is-active");
+        item.removeAttribute("aria-current");
+      });
+      return;
+    }
+
+    const finish = () => {
+      rpPostView.hidden = true;
+      newspaperPanel.classList.remove("is-reading");
+      newspaperExperience.classList.remove("is-reading");
+      rpCards.forEach((item) => {
+        item.classList.remove("is-active");
+        item.removeAttribute("aria-current");
+      });
+      gsap.set(rpPostView, { clearProps: "opacity,x" });
+    };
+
+    gsap.killTweensOf(rpPostView);
+    if (animate && !reduceMotion) {
+      gsap.to(rpPostView, { opacity: 0, x: 72, duration: 0.28, ease: "power2.in", onComplete: finish });
+    } else {
+      finish();
+    }
+  }
+
+  function syncRpPostRoute(animate = true) {
+    const slug = getRpPostSlugFromRoute();
+
+    if (!slug) {
+      hideRpPost(animate);
+      return;
+    }
+
+    const card = rpCards.find((item) => item.dataset.rpSlug === slug);
+    if (!card) {
+      replaceWithNewspaperListRoute();
+      hideRpPost(false);
+      return;
+    }
+
+    showRpPost(card, animate);
+  }
+
+  function openRpPost(card) {
+    if (!card || newspaperIsTransitioning) return;
+    pushRpPostRoute(card.dataset.rpSlug);
+    syncRpPostRoute();
+  }
+
+  function requestRpPostBack() {
+    if (
+      window.history.state?.civitumView === "newspaper-post" &&
+      window.history.state?.fromNewspaperList
+    ) {
+      window.history.back();
+      return;
+    }
+
+    replaceWithNewspaperListRoute();
+    syncRpPostRoute();
+  }
+
+  rpCards.forEach((card, index) => {
+    const record = rpPostRecords[index];
+    card.dataset.rpSlug = record.slug;
+    card.tabIndex = 0;
+    card.setAttribute("role", "link");
+    card.setAttribute("aria-label", `Открыть публикацию: ${card.querySelector("h3").textContent}`);
+
+    card.addEventListener("click", () => openRpPost(card));
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openRpPost(card);
+    });
+  });
+
+  rpPostBack.addEventListener("click", requestRpPostBack);
 
   function updateRpFeed() {
     const query = rpSearchInput.value.trim().toLocaleLowerCase("ru");
@@ -614,7 +1000,11 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (document.body.classList.contains("newspaper-is-open")) {
-      closeNewspaper();
+      if (getRpPostSlugFromRoute()) {
+        requestRpPostBack();
+      } else {
+        requestCloseNewspaper();
+      }
     } else {
       closeMap();
     }
