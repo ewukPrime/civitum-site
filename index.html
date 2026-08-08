@@ -7,7 +7,7 @@
   <title>CIVITUM — Launcher</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:ital,wght@0,400;0,700;1,400;1,700&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Fira+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -84,6 +84,203 @@
       <a class="social-button" href="#" aria-label="Discord">DC</a>
       <a class="social-button" href="#" aria-label="Telegram">TG</a>
     </div>
+
+    <section id="shop-experience" aria-hidden="true">
+      <div class="shop-panel" role="region" aria-labelledby="shop-title">
+        <div class="shop-topline">
+          <button id="shop-back" type="button">← На главную</button>
+          <span>Интендантский склад · CIVITUM</span>
+        </div>
+
+        <header class="shop-header">
+          <div>
+            <p>CIVITUM / снабжение</p>
+            <h2 id="shop-title">Наши товары</h2>
+          </div>
+
+          <label class="shop-search">
+            <span>Поиск</span>
+            <input id="shop-search-input" type="search" placeholder="Найти товар…" autocomplete="off">
+          </label>
+        </header>
+
+        <div class="shop-toolbar">
+          <div class="shop-filters" aria-label="Категории товаров">
+            <button type="button" data-shop-filter="all" aria-pressed="true">Все товары</button>
+            <button type="button" data-shop-filter="currency" aria-pressed="false">Валюта</button>
+            <button type="button" data-shop-filter="other" aria-pressed="false">Другое</button>
+            <button type="button" data-shop-filter="cases" aria-pressed="false">Кейсы</button>
+            <button type="button" data-shop-filter="kits" aria-pressed="false">Наборы</button>
+            <button type="button" data-shop-filter="privileges" aria-pressed="false">Привилегии</button>
+          </div>
+          <span id="shop-result-count">6 товаров</span>
+        </div>
+
+        <div class="shop-grid" aria-live="polite">
+          <article class="shop-card" data-shop-category="currency" data-shop-slug="coins">
+            <div class="shop-card-visual shop-card-visual--coins" aria-hidden="true"><span>¤</span></div>
+            <div class="shop-card-copy">
+              <span class="shop-card-category">Валюта</span>
+              <h3>Монеты</h3>
+              <p>50 жетонов для торговли и снабжения.</p>
+              <div><strong>50 ₽ / 50 шт.</strong><button type="button" class="shop-buy">В корзину</button></div>
+            </div>
+          </article>
+
+          <article class="shop-card" data-shop-category="privileges" data-shop-slug="supply-pass">
+            <div class="shop-card-visual shop-card-visual--privilege" aria-hidden="true"><span>★</span></div>
+            <div class="shop-card-copy">
+              <span class="shop-card-category">Привилегии</span>
+              <h3>Пропуск снабжения</h3>
+              <p>Расширенный доступ к складу на семь дней.</p>
+              <div><strong>189 ₽</strong><button type="button" class="shop-buy">В корзину</button></div>
+            </div>
+          </article>
+
+          <article class="shop-card" data-shop-category="cases" data-shop-slug="coin-case">
+            <div class="shop-card-visual shop-card-visual--case" aria-hidden="true"><span>▣</span></div>
+            <div class="shop-card-copy">
+              <span class="shop-card-category">Кейсы</span>
+              <h3>Кейс с монетами</h3>
+              <p>Случайный запас валюты для вашего отряда.</p>
+              <div><strong>79 ₽ / 1 шт.</strong><button type="button" class="shop-buy">В корзину</button></div>
+            </div>
+          </article>
+
+          <article class="shop-card" data-shop-category="kits" data-shop-slug="radio-kit">
+            <div class="shop-card-visual shop-card-visual--radio" aria-hidden="true"><span>⌁</span></div>
+            <div class="shop-card-copy">
+              <span class="shop-card-category">Наборы</span>
+              <h3>Набор связиста</h3>
+              <p>Комплект связи и полевых расходников.</p>
+              <div><strong>249 ₽</strong><button type="button" class="shop-buy">В корзину</button></div>
+            </div>
+          </article>
+
+          <article class="shop-card" data-shop-category="other" data-shop-slug="callsign">
+            <div class="shop-card-visual shop-card-visual--callsign" aria-hidden="true"><span>№</span></div>
+            <div class="shop-card-copy">
+              <span class="shop-card-category">Другое</span>
+              <h3>Персональный позывной</h3>
+              <p>Однократная смена игрового позывного.</p>
+              <div><strong>99 ₽</strong><button type="button" class="shop-buy">В корзину</button></div>
+            </div>
+          </article>
+
+          <article class="shop-card" data-shop-category="kits" data-shop-slug="field-kit">
+            <div class="shop-card-visual shop-card-visual--field" aria-hidden="true"><span>✚</span></div>
+            <div class="shop-card-copy">
+              <span class="shop-card-category">Наборы</span>
+              <h3>Полевой комплект</h3>
+              <p>Набор снабжения для продолжительной операции.</p>
+              <div><strong>329 ₽</strong><button type="button" class="shop-buy">В корзину</button></div>
+            </div>
+          </article>
+        </div>
+
+        <div id="shop-product-overlay" class="shop-product-overlay" hidden>
+          <article
+            id="shop-product-dialog"
+            class="shop-product-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shop-product-dialog-title"
+          >
+            <header class="shop-product-dialog__header">
+              <div>
+                <span>Интендантская карточка</span>
+                <h3 id="shop-product-dialog-title">Детали поставки</h3>
+              </div>
+              <button id="shop-product-close" type="button" aria-label="Закрыть детали товара">×</button>
+            </header>
+
+            <div class="shop-product-steps" aria-label="Этапы оформления">
+              <div id="shop-product-step-marker-1" class="is-current"><span>1</span>Выбор товара</div>
+              <i aria-hidden="true"></i>
+              <div id="shop-product-step-marker-2"><span>2</span>Оплата</div>
+            </div>
+
+            <div class="shop-product-step-panel" data-shop-product-step="1">
+              <div class="shop-product-summary">
+                <div id="shop-product-symbol" class="shop-product-symbol" aria-hidden="true">¤</div>
+                <div>
+                  <span id="shop-product-category">Валюта</span>
+                  <h4 id="shop-product-title">Монеты</h4>
+                  <p id="shop-product-description"></p>
+                </div>
+              </div>
+
+              <section class="shop-product-section" aria-labelledby="shop-variant-title">
+                <h4 id="shop-variant-title">Выберите объём поставки</h4>
+                <div id="shop-product-variants" class="shop-product-variants">
+                  <button type="button" data-shop-multiplier="1" aria-pressed="true"><span>Стандарт</span><strong></strong></button>
+                  <button type="button" data-shop-multiplier="2.35" aria-pressed="false"><span>Усиленный</span><strong></strong></button>
+                  <button type="button" data-shop-multiplier="4.25" aria-pressed="false"><span>Арсенал</span><strong></strong></button>
+                </div>
+              </section>
+
+              <section class="shop-product-benefits">
+                <span>В состав поставки входит</span>
+                <ul>
+                  <li id="shop-product-benefit-primary"></li>
+                  <li>Автоматическая выдача после подтверждения</li>
+                </ul>
+              </section>
+
+              <label class="shop-product-confirm">
+                <input id="shop-product-confirm" type="checkbox">
+                <span>Я проверил комплектацию и подтверждаю выбор</span>
+              </label>
+
+              <div class="shop-product-total">
+                <span>Итого</span>
+                <strong id="shop-product-total">0 ₽</strong>
+              </div>
+
+              <button id="shop-product-submit" class="shop-product-submit" type="button" disabled>Оплатить</button>
+              <p class="shop-product-note">Позиция будет закреплена за текущим аккаунтом. На следующем шаге вы сможете проверить заказ перед оплатой.</p>
+            </div>
+
+            <div class="shop-product-step-panel shop-payment" data-shop-product-step="2" hidden>
+              <section class="shop-payment-order" aria-labelledby="shop-payment-order-title">
+                <span id="shop-payment-order-title">Ваш заказ</span>
+                <div>
+                  <div id="shop-payment-symbol" class="shop-payment-symbol" aria-hidden="true">¤</div>
+                  <div class="shop-payment-order__copy">
+                    <strong id="shop-payment-product">Монеты</strong>
+                    <small id="shop-payment-variant">50 шт.</small>
+                  </div>
+                  <strong id="shop-payment-price">0 ₽</strong>
+                </div>
+                <p>Склад: <strong>Civitum</strong></p>
+              </section>
+
+              <form id="shop-payment-form" class="shop-payment-form">
+                <label>
+                  <span>Никнейм<em>*</em></span>
+                  <input id="shop-payment-nickname" name="nickname" type="text" placeholder="Введите ваш никнейм" autocomplete="nickname" required maxlength="32">
+                </label>
+                <label>
+                  <span>Email<em>*</em></span>
+                  <input id="shop-payment-email" name="email" type="email" placeholder="Введите вашу эл. почту" autocomplete="email" required>
+                </label>
+                <label>
+                  <span>Промокод</span>
+                  <input id="shop-payment-promo" name="promo" type="text" placeholder="Введите промокод, если есть" autocomplete="off" maxlength="32">
+                </label>
+
+                <div class="shop-payment-actions">
+                  <button id="shop-payment-back" type="button">Назад</button>
+                  <button id="shop-payment-submit" type="submit">Оплатить 0 ₽</button>
+                </div>
+
+                <p class="shop-payment-agreement"><span>*</span> Нажимая кнопку «Оплатить», вы подтверждаете состав заказа и соглашаетесь с правилами сервера.</p>
+              </form>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
 
     <section id="newspaper-experience" aria-hidden="true">
       <div class="rp-panel" role="dialog" aria-label="РП-посты">

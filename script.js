@@ -237,7 +237,8 @@ document.addEventListener("DOMContentLoaded", () => {
     element.addEventListener("mouseenter", () => {
       if (
         document.body.classList.contains("map-is-open") ||
-        document.body.classList.contains("newspaper-is-open")
+        document.body.classList.contains("newspaper-is-open") ||
+        document.body.classList.contains("shop-is-open")
       ) return;
       setMotionSpeed(entry, 0);
       const hoverState = {
@@ -252,7 +253,8 @@ document.addEventListener("DOMContentLoaded", () => {
     element.addEventListener("mouseleave", () => {
       if (
         document.body.classList.contains("map-is-open") ||
-        document.body.classList.contains("newspaper-is-open")
+        document.body.classList.contains("newspaper-is-open") ||
+        document.body.classList.contains("shop-is-open")
       ) return;
       const restState = {
         scale: 1,
@@ -270,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
     button.addEventListener("click", () => {
       const target = document.getElementById(button.dataset.focusObject);
       if (!target) return;
-      if (target.id === "item-map" || target.id === "item-newspaper") {
+      if (target.id === "item-map" || target.id === "item-abacus" || target.id === "item-newspaper") {
         target.click();
         return;
       }
@@ -420,7 +422,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
       newspaperIsTransitioning ||
       document.body.classList.contains("newspaper-is-open") ||
-      document.body.classList.contains("map-is-open")
+      document.body.classList.contains("map-is-open") ||
+      document.body.classList.contains("shop-is-open")
     ) return;
 
     if (updateHistory && !isNewspaperRoute()) pushNewspaperRoute();
@@ -873,6 +876,595 @@ document.addEventListener("DOMContentLoaded", () => {
 
   rpSearchInput.addEventListener("input", updateRpFeed);
 
+  /* Immersive quartermaster shop opened by the abacus */
+  const shopItem = document.getElementById("item-abacus");
+  const shopExperience = document.getElementById("shop-experience");
+  const shopPanel = shopExperience.querySelector(".shop-panel");
+  const shopBack = document.getElementById("shop-back");
+  const shopVisual = shopItem.querySelector(".artifact-visual");
+  const shopMotion = motion.get("item-abacus");
+  const shopSearchInput = document.getElementById("shop-search-input");
+  const shopFilterButtons = [...document.querySelectorAll("[data-shop-filter]")];
+  const shopCards = [...document.querySelectorAll(".shop-card")];
+  const shopResultCount = document.getElementById("shop-result-count");
+  const shopProductOverlay = document.getElementById("shop-product-overlay");
+  const shopProductDialog = document.getElementById("shop-product-dialog");
+  const shopProductClose = document.getElementById("shop-product-close");
+  const shopProductSymbol = document.getElementById("shop-product-symbol");
+  const shopProductCategory = document.getElementById("shop-product-category");
+  const shopProductTitle = document.getElementById("shop-product-title");
+  const shopProductDescription = document.getElementById("shop-product-description");
+  const shopProductBenefitPrimary = document.getElementById("shop-product-benefit-primary");
+  const shopProductVariantButtons = [...document.querySelectorAll("[data-shop-multiplier]")];
+  const shopProductConfirm = document.getElementById("shop-product-confirm");
+  const shopProductTotal = document.getElementById("shop-product-total");
+  const shopProductSubmit = document.getElementById("shop-product-submit");
+  const shopProductDialogTitle = shopProductDialog.querySelector(".shop-product-dialog__header h3");
+  const shopProductStepPanels = [...document.querySelectorAll("[data-shop-product-step]")];
+  const shopProductStepMarkers = [
+    document.getElementById("shop-product-step-marker-1"),
+    document.getElementById("shop-product-step-marker-2")
+  ];
+  const shopPaymentForm = document.getElementById("shop-payment-form");
+  const shopPaymentSymbol = document.getElementById("shop-payment-symbol");
+  const shopPaymentProduct = document.getElementById("shop-payment-product");
+  const shopPaymentVariant = document.getElementById("shop-payment-variant");
+  const shopPaymentPrice = document.getElementById("shop-payment-price");
+  const shopPaymentNickname = document.getElementById("shop-payment-nickname");
+  const shopPaymentBack = document.getElementById("shop-payment-back");
+  const shopPaymentSubmit = document.getElementById("shop-payment-submit");
+  const shopFadeElements = [
+    document.getElementById("left-console"),
+    document.getElementById("social"),
+    document.getElementById("item-map"),
+    document.getElementById("item-book"),
+    document.getElementById("item-newspaper")
+  ];
+  const shopRestRotation = Number(gsap.getProperty(shopItem, "rotation")) || 6;
+  let shopTimeline = null;
+  let shopOpenFloat = null;
+  let shopIsTransitioning = false;
+  let shopRouteTimer = null;
+  let activeShopFilter = "all";
+  let activeShopProduct = null;
+  let activeShopBasePrice = 0;
+  let activeShopMultiplier = 1;
+  let activeShopProductStep = 1;
+
+  function isShopRoute() {
+    if (usesFileProtocol) return /^#\/shop(?:\/[^/?#]+)?\/?$/.test(window.location.hash);
+    return /\/shop(?:\/[^/?#]+)?\/?$/.test(window.location.pathname);
+  }
+
+  function getShopProductSlugFromRoute() {
+    const route = usesFileProtocol ? window.location.hash : window.location.pathname;
+    const match = route.match(/\/shop\/([^/?#]+)\/?$/);
+
+    if (!match) return null;
+
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return match[1];
+    }
+  }
+
+  function pushShopRoute() {
+    const route = usesFileProtocol ? "#/shop" : "/shop";
+    window.history.pushState(
+      { ...window.history.state, civitumView: "shop", fromCivitumHome: true },
+      "",
+      route
+    );
+  }
+
+  function pushShopProductRoute(slug) {
+    const encodedSlug = encodeURIComponent(slug);
+    const route = usesFileProtocol ? `#/shop/${encodedSlug}` : `/shop/${encodedSlug}`;
+    const isSwitchingProduct = Boolean(getShopProductSlugFromRoute());
+    const fromShopList = isSwitchingProduct
+      ? Boolean(window.history.state?.fromShopList)
+      : isShopRoute();
+    const historyMethod = isSwitchingProduct ? "replaceState" : "pushState";
+
+    window.history[historyMethod](
+      {
+        ...window.history.state,
+        civitumView: "shop-product",
+        shopSlug: slug,
+        fromCivitumHome: false,
+        fromShopList
+      },
+      "",
+      route
+    );
+  }
+
+  function replaceWithShopListRoute() {
+    const route = usesFileProtocol ? "#/shop" : "/shop";
+    window.history.replaceState(
+      { ...window.history.state, civitumView: "shop", shopSlug: null, fromShopList: false },
+      "",
+      route
+    );
+  }
+
+  function syncShopPanelScale() {
+    const sceneScale = Math.max(0.72, Math.min(2.25, window.innerWidth / 1920));
+
+    shopPanel.style.width = `${100 / sceneScale}%`;
+    shopPanel.style.height = `${100 / sceneScale}%`;
+    shopPanel.style.fontSize = `${16 / sceneScale}px`;
+    [11, 12, 13, 14, 16, 20, 24, 42].forEach((size) => {
+      shopPanel.style.setProperty(`--shop-font-${size}`, `${size / sceneScale}px`);
+    });
+    shopPanel.style.transform = `scale(${sceneScale})`;
+  }
+
+  function formatShopPrice(value) {
+    return `${Math.round(value).toLocaleString("ru-RU")} ₽`;
+  }
+
+  function getShopCardPrice(card) {
+    const priceText = card.querySelector(".shop-card-copy strong")?.textContent || "0";
+    const match = priceText.replace(/\s/g, "").match(/\d+/);
+    return match ? Number(match[0]) : 0;
+  }
+
+  function getActiveShopPrice() {
+    return activeShopBasePrice * activeShopMultiplier;
+  }
+
+  function getActiveShopVariantButton() {
+    return shopProductVariantButtons.find((button) => button.getAttribute("aria-pressed") === "true")
+      || shopProductVariantButtons[0];
+  }
+
+  function syncShopPaymentSummary() {
+    const selectedVariant = getActiveShopVariantButton();
+    const price = formatShopPrice(getActiveShopPrice());
+
+    shopPaymentSymbol.className = shopProductSymbol.className.replace("shop-product-symbol", "shop-payment-symbol");
+    shopPaymentSymbol.textContent = shopProductSymbol.textContent;
+    shopPaymentProduct.textContent = shopProductTitle.textContent;
+    shopPaymentVariant.textContent = selectedVariant?.querySelector("span")?.textContent || "Стандарт";
+    shopPaymentPrice.textContent = price;
+    shopPaymentSubmit.textContent = `Оплатить ${price}`;
+    shopPaymentSubmit.classList.remove("is-complete");
+    shopPaymentSubmit.disabled = false;
+  }
+
+  function setShopProductStep(step, animate = true) {
+    const nextStep = step === 2 ? 2 : 1;
+    activeShopProductStep = nextStep;
+
+    if (nextStep === 2) syncShopPaymentSummary();
+
+    shopProductStepMarkers.forEach((marker, index) => {
+      marker.classList.toggle("is-current", index + 1 === nextStep);
+    });
+    shopProductDialogTitle.textContent = nextStep === 2 ? "Оплата покупки" : "Детали поставки";
+    shopProductDialog.dataset.step = String(nextStep);
+
+    shopProductStepPanels.forEach((panel) => {
+      const isCurrent = Number(panel.dataset.shopProductStep) === nextStep;
+      panel.hidden = !isCurrent;
+      if (!isCurrent) gsap.set(panel, { clearProps: "opacity,x,y" });
+    });
+
+    const activePanel = shopProductStepPanels.find((panel) => !panel.hidden);
+    if (animate && !reduceMotion && activePanel) {
+      gsap.fromTo(
+        activePanel,
+        { opacity: 0, x: nextStep === 2 ? 24 : -24 },
+        { opacity: 1, x: 0, duration: 0.32, ease: "power3.out", clearProps: "opacity,x" }
+      );
+    }
+
+    if (nextStep === 2) {
+      shopPaymentNickname.focus({ preventScroll: true });
+    } else if (animate) {
+      shopProductSubmit.focus({ preventScroll: true });
+    }
+  }
+
+  function updateShopProductVariant(button) {
+    if (!button) return;
+    activeShopMultiplier = Number(button.dataset.shopMultiplier) || 1;
+    shopProductVariantButtons.forEach((item) => {
+      item.setAttribute("aria-pressed", String(item === button));
+    });
+    shopProductTotal.textContent = formatShopPrice(getActiveShopPrice());
+    if (activeShopProductStep === 2) syncShopPaymentSummary();
+  }
+
+  function showShopProduct(card, animate = true) {
+    if (!card) return;
+
+    activeShopProduct = card;
+    activeShopBasePrice = getShopCardPrice(card);
+    activeShopMultiplier = 1;
+
+    const visual = card.querySelector(".shop-card-visual");
+    const visualStyle = [...visual.classList].find((name) => name.startsWith("shop-card-visual--"));
+    const category = card.querySelector(".shop-card-category")?.textContent.trim() || "Снабжение";
+    const title = card.querySelector("h3")?.textContent.trim() || "Товар";
+    const description = card.querySelector("p")?.textContent.trim() || "Позиция интендантского склада.";
+    const categoryKey = card.dataset.shopCategory || "other";
+    const labelsByCategory = {
+      currency: ["50 шт.", "150 шт.", "500 шт."],
+      privileges: ["7 дней", "30 дней", "Навсегда"],
+      cases: ["1 кейс", "3 кейса", "10 кейсов"],
+      kits: ["Стандарт", "Усиленный", "Арсенал"],
+      other: ["Разовая", "Расширенная", "Постоянная"]
+    };
+    const variantLabels = labelsByCategory[categoryKey] || labelsByCategory.other;
+
+    shopProductSymbol.className = `shop-product-symbol${visualStyle ? ` ${visualStyle}` : ""}`;
+    shopProductSymbol.textContent = visual.textContent.trim();
+    shopProductCategory.textContent = category;
+    shopProductTitle.textContent = title;
+    shopProductDescription.textContent = description;
+    shopProductBenefitPrimary.textContent = description;
+
+    shopProductVariantButtons.forEach((button, index) => {
+      const multiplier = Number(button.dataset.shopMultiplier) || 1;
+      button.querySelector("span").textContent = variantLabels[index];
+      button.querySelector("strong").textContent = formatShopPrice(activeShopBasePrice * multiplier);
+      button.setAttribute("aria-pressed", String(index === 0));
+    });
+
+    shopProductConfirm.checked = false;
+    shopProductSubmit.disabled = true;
+    shopProductSubmit.classList.remove("is-added");
+    shopProductSubmit.textContent = "Оплатить";
+    shopProductTotal.textContent = formatShopPrice(activeShopBasePrice);
+    shopPaymentForm.reset();
+    setShopProductStep(1, false);
+
+    shopCards.forEach((item) => item.classList.toggle("is-selected", item === card));
+
+    const wasHidden = shopProductOverlay.hidden;
+    shopProductOverlay.hidden = false;
+    gsap.killTweensOf([shopProductOverlay, shopProductDialog]);
+
+    if (animate && !reduceMotion) {
+      if (wasHidden) {
+        gsap.fromTo(shopProductOverlay, { opacity: 0 }, { opacity: 1, duration: 0.28, ease: "power2.out" });
+        gsap.fromTo(
+          shopProductDialog,
+          { opacity: 0, y: 28, scale: 0.97 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: "power3.out" }
+        );
+      } else {
+        gsap.fromTo(shopProductDialog, { opacity: 0.45, y: 10 }, { opacity: 1, y: 0, duration: 0.24, ease: "power2.out" });
+      }
+    } else {
+      gsap.set([shopProductOverlay, shopProductDialog], { opacity: 1 });
+      gsap.set(shopProductDialog, { y: 0, scale: 1 });
+    }
+
+    shopProductClose.focus({ preventScroll: true });
+  }
+
+  function hideShopProduct(animate = true) {
+    if (shopProductOverlay.hidden) {
+      activeShopProduct = null;
+      shopCards.forEach((item) => item.classList.remove("is-selected"));
+      return;
+    }
+
+    const finish = () => {
+      shopProductOverlay.hidden = true;
+      activeShopProduct = null;
+      activeShopProductStep = 1;
+      shopCards.forEach((item) => item.classList.remove("is-selected"));
+      gsap.set([shopProductOverlay, shopProductDialog], { clearProps: "opacity,y,scale" });
+    };
+
+    gsap.killTweensOf([shopProductOverlay, shopProductDialog]);
+    if (animate && !reduceMotion) {
+      gsap.to(shopProductDialog, { opacity: 0, y: 20, scale: 0.98, duration: 0.22, ease: "power2.in" });
+      gsap.to(shopProductOverlay, { opacity: 0, duration: 0.24, ease: "power2.in", onComplete: finish });
+    } else {
+      finish();
+    }
+  }
+
+  function syncShopProductRoute(animate = true) {
+    const slug = getShopProductSlugFromRoute();
+
+    if (!slug) {
+      hideShopProduct(animate);
+      return;
+    }
+
+    const card = shopCards.find((item) => item.dataset.shopSlug === slug);
+    if (!card) {
+      replaceWithShopListRoute();
+      hideShopProduct(false);
+      return;
+    }
+
+    showShopProduct(card, animate);
+  }
+
+  function openShopProduct(card) {
+    if (!card || shopIsTransitioning) return;
+    pushShopProductRoute(card.dataset.shopSlug);
+    syncShopProductRoute();
+  }
+
+  function requestCloseShopProduct() {
+    if (
+      window.history.state?.civitumView === "shop-product" &&
+      window.history.state?.fromShopList
+    ) {
+      window.history.back();
+      return;
+    }
+
+    replaceWithShopListRoute();
+    syncShopProductRoute();
+  }
+
+  function openShop(options = {}) {
+    const updateHistory = options?.updateHistory !== false;
+
+    if (
+      shopIsTransitioning ||
+      document.body.classList.contains("shop-is-open") ||
+      document.body.classList.contains("map-is-open") ||
+      document.body.classList.contains("newspaper-is-open")
+    ) return;
+
+    if (updateHistory && !isShopRoute()) pushShopRoute();
+
+    shopIsTransitioning = true;
+    document.body.classList.add("shop-is-open");
+    gsap.killTweensOf(shopItem, "scale");
+    pauseArtifactMotion(shopMotion);
+    playPulse?.pause();
+
+    const rect = shopItem.getBoundingClientRect();
+    const currentX = Number(gsap.getProperty(shopItem, "x")) || 0;
+    const currentY = Number(gsap.getProperty(shopItem, "y")) || 0;
+    const targetScale = Math.min(2.25, Math.max(1.65, (window.innerHeight * 0.7) / shopItem.offsetHeight));
+    const targetCenterX = window.innerWidth * 0.86;
+    const targetCenterY = window.innerHeight * 0.53;
+
+    shopExperience.classList.add("is-active");
+    shopExperience.setAttribute("aria-hidden", "false");
+    gsap.set(shopExperience, { opacity: 0, x: -54 });
+    gsap.set(shopFadeElements, { pointerEvents: "none" });
+
+    shopTimeline = gsap.timeline({
+      defaults: { ease: "power3.inOut" },
+      onComplete: () => {
+        shopIsTransitioning = false;
+        if (!reduceMotion) {
+          shopOpenFloat = gsap.to(shopVisual, {
+            y: -5,
+            duration: 3.1,
+            ease: "sine.inOut",
+            repeat: -1,
+            yoyo: true
+          });
+        }
+        syncShopProductRoute(false);
+        if (!getShopProductSlugFromRoute()) shopBack.focus({ preventScroll: true });
+      }
+    });
+
+    shopTimeline
+      .to(shopFadeElements, { opacity: 0, duration: 0.46, stagger: 0.018 }, 0)
+      .to(shopItem.querySelector(".artifact-label"), { opacity: 0, duration: 0.2 }, 0)
+      .to(shopItem.querySelector(".object-glow"), { opacity: 0, duration: 0.3 }, 0)
+      .to(shopVisual, {
+        "--artifact-brightness": 0.62,
+        duration: reduceMotion ? 0.01 : 0.42,
+        ease: "power2.out"
+      }, 0.04)
+      .to(shopItem, {
+        x: currentX + targetCenterX - (rect.left + rect.width / 2),
+        y: currentY + targetCenterY - (rect.top + rect.height / 2),
+        rotation: 4,
+        scale: targetScale,
+        zIndex: 13,
+        duration: reduceMotion ? 0.01 : 1.02,
+        ease: "expo.inOut"
+      }, 0)
+      .to(shopExperience, {
+        opacity: 1,
+        x: 0,
+        duration: reduceMotion ? 0.01 : 0.7,
+        ease: "power3.out"
+      }, reduceMotion ? 0.01 : 0.32);
+  }
+
+  function closeShop() {
+    if (shopIsTransitioning || !document.body.classList.contains("shop-is-open")) return;
+    shopIsTransitioning = true;
+    shopTimeline?.kill();
+    shopOpenFloat?.kill();
+    shopOpenFloat = null;
+    gsap.set(shopVisual, { y: 0 });
+
+    const timeline = gsap.timeline({
+      defaults: { ease: "power3.inOut" },
+      onComplete: () => {
+        shopExperience.classList.remove("is-active");
+        shopExperience.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("shop-is-open");
+        gsap.set(shopExperience, { clearProps: "opacity,x" });
+        gsap.set(shopItem, { clearProps: "x,y,rotation,scale,zIndex" });
+        shopVisual.style.removeProperty("--artifact-brightness");
+        gsap.set(shopVisual, { clearProps: "y,opacity" });
+        gsap.set(shopItem.querySelector(".object-glow"), { clearProps: "opacity" });
+        gsap.set(shopFadeElements, { clearProps: "opacity,pointerEvents" });
+        hideShopProduct(false);
+        resumeArtifactMotion(shopMotion);
+        playPulse?.resume();
+        shopIsTransitioning = false;
+        shopItem.focus({ preventScroll: true });
+      }
+    });
+
+    timeline
+      .to(shopExperience, { opacity: 0, x: -44, duration: reduceMotion ? 0.01 : 0.34 }, 0)
+      .to(shopVisual, { "--artifact-brightness": 1, duration: reduceMotion ? 0.01 : 0.3 }, 0)
+      .to(shopItem, {
+        x: 0,
+        y: 0,
+        rotation: shopRestRotation,
+        scale: 1,
+        duration: reduceMotion ? 0.01 : 0.9,
+        ease: "expo.inOut"
+      }, 0.08)
+      .to(shopFadeElements, { opacity: 1, duration: 0.46, stagger: 0.018 }, 0.38);
+  }
+
+  function requestCloseShop() {
+    if (shopIsTransitioning) return;
+
+    if (
+      isShopRoute() &&
+      window.history.state?.civitumView === "shop" &&
+      window.history.state?.fromCivitumHome
+    ) {
+      window.history.back();
+      return;
+    }
+
+    if (isShopRoute()) replaceWithHomeRoute();
+    closeShop();
+  }
+
+  function syncShopRoute() {
+    window.clearTimeout(shopRouteTimer);
+
+    if (shopIsTransitioning) {
+      shopRouteTimer = window.setTimeout(syncShopRoute, 60);
+      return;
+    }
+
+    const shouldBeOpen = isShopRoute();
+    const isOpen = document.body.classList.contains("shop-is-open");
+
+    if (shouldBeOpen && !isOpen) {
+      openShop({ updateHistory: false });
+    } else if (!shouldBeOpen && isOpen) {
+      closeShop();
+    } else if (shouldBeOpen && isOpen) {
+      syncShopProductRoute();
+    }
+  }
+
+  function updateShopGrid() {
+    const query = shopSearchInput.value.trim().toLocaleLowerCase("ru");
+    let visibleCount = 0;
+
+    shopCards.forEach((card) => {
+      const matchesFilter = activeShopFilter === "all" || card.dataset.shopCategory === activeShopFilter;
+      const matchesQuery = !query || card.textContent.toLocaleLowerCase("ru").includes(query);
+      const isVisible = matchesFilter && matchesQuery;
+      card.hidden = !isVisible;
+      if (isVisible) visibleCount += 1;
+    });
+
+    const countWord = visibleCount % 10 === 1 && visibleCount % 100 !== 11
+      ? "товар"
+      : [2, 3, 4].includes(visibleCount % 10) && ![12, 13, 14].includes(visibleCount % 100)
+        ? "товара"
+        : "товаров";
+    shopResultCount.textContent = `${visibleCount} ${countWord}`;
+  }
+
+  shopFilterButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeShopFilter = button.dataset.shopFilter;
+      shopFilterButtons.forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+      updateShopGrid();
+    });
+  });
+
+  shopSearchInput.addEventListener("input", updateShopGrid);
+
+  function setShopCartState(card, isAdded) {
+    const button = card?.querySelector(".shop-buy");
+    if (!button) return;
+    button.classList.toggle("is-added", isAdded);
+    button.textContent = isAdded ? "Добавлено" : "В корзину";
+    button.setAttribute("aria-pressed", String(isAdded));
+  }
+
+  shopCards.forEach((card) => {
+    card.tabIndex = 0;
+    card.setAttribute("role", "link");
+    card.setAttribute("aria-label", `Открыть детали товара: ${card.querySelector("h3").textContent}`);
+    card.addEventListener("click", () => openShopProduct(card));
+    card.addEventListener("keydown", (event) => {
+      if (event.target !== card || (event.key !== "Enter" && event.key !== " ")) return;
+      event.preventDefault();
+      openShopProduct(card);
+    });
+  });
+
+  document.querySelectorAll(".shop-buy").forEach((button) => {
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const card = button.closest(".shop-card");
+      setShopCartState(card, !button.classList.contains("is-added"));
+    });
+  });
+
+  shopProductVariantButtons.forEach((button) => {
+    button.addEventListener("click", () => updateShopProductVariant(button));
+  });
+
+  shopProductConfirm.addEventListener("change", () => {
+    shopProductSubmit.disabled = !shopProductConfirm.checked;
+  });
+
+  shopProductSubmit.addEventListener("click", () => {
+    if (!activeShopProduct || shopProductSubmit.disabled) return;
+    setShopProductStep(2);
+  });
+
+  shopPaymentBack.addEventListener("click", () => setShopProductStep(1));
+
+  shopPaymentForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!activeShopProduct || !shopPaymentForm.reportValidity()) return;
+
+    shopPaymentSubmit.disabled = true;
+    shopPaymentSubmit.classList.add("is-complete");
+    shopPaymentSubmit.textContent = "Платёж подготовлен";
+  });
+
+  shopProductClose.addEventListener("click", requestCloseShopProduct);
+  shopProductOverlay.addEventListener("click", (event) => {
+    if (event.target === shopProductOverlay) requestCloseShopProduct();
+  });
+
+  shopItem.addEventListener("click", openShop);
+  shopBack.addEventListener("click", requestCloseShop);
+  window.addEventListener("popstate", syncShopRoute);
+  if (usesFileProtocol) window.addEventListener("hashchange", syncShopRoute);
+  syncShopPanelScale();
+  window.addEventListener("resize", syncShopPanelScale);
+
+  const startedOnShopRoute = isShopRoute();
+  if (startedOnShopRoute) {
+    window.history.replaceState(
+      { ...window.history.state, civitumView: "shop-direct", fromCivitumHome: false },
+      "",
+      window.location.href
+    );
+    window.requestAnimationFrame(() => openShop({ updateHistory: false }));
+  }
+
   /* Immersive map zoom */
   const mapItem = document.getElementById("item-map");
   const mapExperience = document.getElementById("map-experience");
@@ -906,7 +1498,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
       mapIsTransitioning ||
       document.body.classList.contains("map-is-open") ||
-      document.body.classList.contains("newspaper-is-open")
+      document.body.classList.contains("newspaper-is-open") ||
+      document.body.classList.contains("shop-is-open")
     ) return;
     mapIsTransitioning = true;
     document.body.classList.add("map-is-open");
@@ -1004,6 +1597,16 @@ document.addEventListener("DOMContentLoaded", () => {
         requestRpPostBack();
       } else {
         requestCloseNewspaper();
+      }
+    } else if (document.body.classList.contains("shop-is-open")) {
+      if (getShopProductSlugFromRoute()) {
+        if (activeShopProductStep === 2) {
+          setShopProductStep(1);
+        } else {
+          requestCloseShopProduct();
+        }
+      } else {
+        requestCloseShop();
       }
     } else {
       closeMap();
