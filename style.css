@@ -9,10 +9,12 @@
 :root {
   --topbar-height: 2.95vw;
   --ui-scale: 1.25;
-  --scene-width: min(100vw, 177.7778vh);
-  --scene-height: min(100vh, 56.25vw);
-  --scene-x: calc(50vw - min(50vw, 88.8889vh));
-  --scene-y: calc(50vh - min(50vh, 28.125vw));
+  /* The composition reference is the user's 1907 x 947 working viewport. */
+  --scene-width: min(100vw, 201.3728vh);
+  --scene-height: min(100vh, 49.6592vw);
+  --scene-x: calc(50vw - min(50vw, 100.6864vh));
+  --scene-y: calc(50vh - min(50vh, 24.8296vw));
+  --map-top: min(10.9414vh, 5.4337vw);
   --bg: #090b0c;
   --panel: rgba(13, 14, 14, 0.46);
   --panel-strong: rgba(18, 17, 15, 0.72);
@@ -64,7 +66,7 @@ a:focus-visible {
   position: relative;
   width: 100vw;
   height: 100dvh;
-  min-height: 540px;
+  min-height: 0;
   isolation: isolate;
   overflow: hidden;
   background: #0d0c0b;
@@ -140,12 +142,12 @@ a:focus-visible {
 
 #brand-title {
   position: absolute;
-  left: -2.7vw;
-  top: 1vh;
+  left: -0.375%;
+  top: 61.75%;
   z-index: 0;
   color: rgba(199, 186, 151, 0.075);
   font-family: "Cinzel", serif;
-  font-size: 7.6vw;
+  font-size: min(9.5vw, 19.1304vh);
   font-weight: 600;
   letter-spacing: 0.045em;
   line-height: 0.86;
@@ -279,27 +281,26 @@ a:focus-visible {
 /* Reserved lower-left interface zone: brand, CTA and compact telemetry only */
 #left-console {
   position: absolute;
-  left: 3vw;
-  bottom: 3vh;
+  left: var(--scene-x);
+  top: var(--scene-y);
+  bottom: auto;
   z-index: 8;
-  width: 44vw;
-  height: 39vh;
+  width: var(--scene-width);
+  height: var(--scene-height);
   pointer-events: none;
 }
 
 #hero-content {
   position: absolute;
   inset: 0;
-  transform: scale(var(--ui-scale));
-  transform-origin: 0 0;
 }
 
 #play-btn {
   position: absolute;
-  left: 0vw;
-  top: 18vh;
-  width: 17vw;
-  height: 6vh;
+  left: 16.75%;
+  top: 80.5%;
+  width: 21.25%;
+  height: 7.5%;
   overflow: hidden;
   color: #10130e;
   border: 1px solid rgba(199, 186, 151, 0.32);
@@ -311,7 +312,7 @@ a:focus-visible {
     inset 0 1px 0 rgba(231, 226, 207, 0.26),
     0 12px 28px rgba(0, 0, 0, 0.34);
   font-family: "Courier New", monospace;
-  font-size: 0.9vw;
+  font-size: min(1.125vw, 2.2654vh);
   font-weight: 700;
   letter-spacing: 0.25em;
   text-transform: uppercase;
@@ -388,7 +389,10 @@ a:focus-visible {
 /* Floating artifacts */
 #objects {
   position: absolute;
-  inset: 0;
+  left: var(--scene-x);
+  top: var(--scene-y);
+  width: var(--scene-width);
+  height: var(--scene-height);
   z-index: 10;
   pointer-events: none;
 }
@@ -464,44 +468,66 @@ a:focus-visible {
 
 .artifact-label {
   position: absolute;
-  left: 50%;
-  bottom: -0.3645833vw;
+  left: var(--label-x, 50%);
+  top: var(--label-y, 100%);
+  bottom: auto;
   z-index: 4;
-  padding: 0.3125vw 0.46875vw;
-  color: rgba(221, 213, 192, 0.78);
-  border: 1px solid rgba(199, 186, 151, 0.1);
-  border-radius: 0.15625vw;
-  background: rgba(12, 12, 12, 0.62);
-  font-size: 0.57vw;
-  letter-spacing: 0.18em;
+  padding:
+    clamp(5px, 0.36vw, 8px)
+    clamp(14px, 0.78vw, 18px)
+    clamp(9px, 0.56vw, 12px);
+  color: rgba(221, 213, 192, 0.82);
+  border: 1px solid rgba(144, 156, 126, 0.28);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(18, 21, 18, 0.62), rgba(10, 13, 17, 0.48));
+  box-shadow:
+    0 0 10px rgba(120, 131, 106, 0.12),
+    0 6px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(235, 229, 211, 0.045);
+  font-family: "Pribambas", "Anonymous Pro", monospace;
+  font-size: clamp(12px, 0.72vw, 16px);
+  font-weight: 400;
+  letter-spacing: 0.13em;
+  line-height: 1;
+  text-shadow: 0 0 7px rgba(199, 186, 151, 0.12);
+  text-transform: uppercase;
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, 5px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform:
+    translate(-50%, calc(-50% + 7px))
+    rotate(var(--label-rotation, 0deg))
+    scale(var(--label-size, 1))
+    scale(0.92);
+  transition: opacity 0.24s ease, transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
   white-space: nowrap;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .artifact:hover .artifact-label,
 .artifact:focus-visible .artifact-label {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--label-rotation, 0deg))
+    scale(var(--label-size, 1));
 }
 
 .map-object {
-  left: -2.5vw;
-  top: calc(var(--scene-y) + min(6vh, 3.375vw));
+  left: 1.7501%;
+  top: var(--map-top);
   z-index: 3;
-  width: min(55vw, 97.7778vh);
-  aspect-ratio: 1672 / 941;
+  width: 47.5445%;
+  aspect-ratio: 1392 / 687;
 }
 
 .map-rope {
   position: absolute;
   left: 50%;
-  top: calc(0px - var(--scene-y) - min(6vh, 3.375vw));
+  top: calc(0px - var(--scene-y) - var(--map-top));
   z-index: 1;
   width: 1px;
-  height: calc(var(--scene-y) + min(6vh, 3.375vw) + min(4.38vw, 7.7867vh));
+  height: calc(var(--scene-y) + var(--map-top) + 2px);
   min-height: 36px;
   background: linear-gradient(to bottom, rgba(159, 149, 124, 0.16), rgba(199, 186, 151, 0.58));
   box-shadow: 1px 0 1px rgba(0, 0, 0, 0.7);
@@ -510,26 +536,63 @@ a:focus-visible {
 }
 
 .abacus-object {
-  right: calc(var(--scene-x) + min(25.5vw, 45.3334vh));
-  top: calc(var(--scene-y) + min(10.5vh, 5.9063vw));
+  /* Includes the original centred-scene offset from the tuned layout. */
+  right: 2.912%;
+  top: 13.4721%;
   z-index: 5;
-  width: min(21.5vw, 38.2223vh);
+  width: 14.8515%;
   transform: rotate(6deg);
 }
 
 .book-object {
-  right: calc(var(--scene-x) + min(3.5vw, 6.2223vh));
-  top: calc(var(--scene-y) + min(19vh, 10.6875vw));
+  /* Includes the original centred-scene offset from the tuned layout. */
+  right: 33.7015%;
+  top: 11.0121%;
   z-index: 4;
-  width: min(18.5vw, 32.8889vh);
+  width: 13.7236%;
 }
 
 .newspaper-object {
-  left: calc(var(--scene-x) + min(50.5vw, 89.7778vh));
-  top: calc(var(--scene-y) + min(53.5vh, 30.0938vw));
+  left: 57.5719%;
+  top: 52.1397%;
   z-index: 4;
-  width: min(26.5vw, 47.1112vh);
+  width: 23.4223%;
   transform: rotate(-3deg);
+}
+
+/*
+ * НАСТРОЙКА ПОДПИСЕЙ ПРИ НАВЕДЕНИИ
+ * --label-x: положение по горизонтали (больше = правее)
+ * --label-y: положение по вертикали (больше = ниже)
+ * --label-rotation: поворот подписи
+ * --label-size: общий масштаб подписи (1 = 100%)
+ */
+.map-object {
+  --label-x: 52.65%;
+  --label-y: 104.5%;
+  --label-rotation: 0deg;
+  --label-size: 1.1;
+}
+
+.book-object {
+  --label-x: 63%;
+  --label-y: 101.5%;
+  --label-rotation: -7deg;
+  --label-size: 1.1;
+}
+
+.abacus-object {
+  --label-x: 45%;
+  --label-y: 103%;
+  --label-rotation: 4deg;
+  --label-size: 1.1;
+}
+
+.newspaper-object {
+  --label-x: 60%;
+  --label-y: 1.5%;
+  --label-rotation: 6.5deg;
+  --label-size: 1.1;
 }
 
 /* Socials stay in the physical bottom-right corner */
@@ -2162,24 +2225,6 @@ body.map-is-open {
   #topbar {
     width: 77.6vw;
   }
-}
-
-@media (max-height: 700px) {
-  #left-console {
-    bottom: 2.5vh;
-    height: 39vh;
-  }
-
-  #brand-title {
-    top: 2.5vh;
-    font-size: clamp(68px, 8.2vw, 122px);
-  }
-
-  #play-btn {
-    top: 18.5vh;
-    height: 48px;
-  }
-
 }
 
 @media (prefers-reduced-motion: reduce) {
