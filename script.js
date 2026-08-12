@@ -737,7 +737,8 @@ document.addEventListener("DOMContentLoaded", () => {
     rpPostLead.textContent = lead.textContent;
     rpPostBody.replaceChildren();
 
-    (record?.paragraphs || [lead.textContent]).forEach((text) => {
+    const apiParagraphs = card.dataset.apiBody ? JSON.parse(card.dataset.apiBody) : null;
+    (apiParagraphs || record?.paragraphs || [lead.textContent]).forEach((text) => {
       const paragraph = document.createElement("p");
       paragraph.textContent = text;
       rpPostBody.appendChild(paragraph);
