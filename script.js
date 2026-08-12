@@ -311,15 +311,18 @@ document.addEventListener("DOMContentLoaded", () => {
   let newspaperIsTransitioning = false;
   let newspaperRouteTimer = null;
 
-  const usesFileProtocol = window.location.protocol === "file:";
+  // GitHub Pages does not rewrite nested paths to index.html. Hash routes keep
+  // the project base path (/civitum-site/) intact and survive a page refresh.
+  const usesHashRouting =
+    window.location.protocol === "file:" || window.location.hostname.endsWith("github.io");
 
   function isNewspaperRoute() {
-    if (usesFileProtocol) return /^#\/newspaper(?:\/[^/?#]+)?\/?$/.test(window.location.hash);
+    if (usesHashRouting) return /^#\/newspaper(?:\/[^/?#]+)?\/?$/.test(window.location.hash);
     return /\/newspaper(?:\/[^/?#]+)?\/?$/.test(window.location.pathname);
   }
 
   function getRpPostSlugFromRoute() {
-    const route = usesFileProtocol ? window.location.hash : window.location.pathname;
+    const route = usesHashRouting ? window.location.hash : window.location.pathname;
     const match = route.match(/\/newspaper\/([^/?#]+)\/?$/);
 
     if (!match) return null;
@@ -332,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function pushNewspaperRoute() {
-    const route = usesFileProtocol ? "#/newspaper" : "/newspaper";
+    const route = usesHashRouting ? "#/newspaper" : "/newspaper";
     window.history.pushState(
       { ...window.history.state, civitumView: "newspaper", fromCivitumHome: true },
       "",
@@ -342,7 +345,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function pushRpPostRoute(slug) {
     const encodedSlug = encodeURIComponent(slug);
-    const route = usesFileProtocol
+    const route = usesHashRouting
       ? `#/newspaper/${encodedSlug}`
       : `/newspaper/${encodedSlug}`;
     const isSwitchingPost = Boolean(getRpPostSlugFromRoute());
@@ -365,7 +368,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function replaceWithNewspaperListRoute() {
-    const route = usesFileProtocol ? "#/newspaper" : "/newspaper";
+    const route = usesHashRouting ? "#/newspaper" : "/newspaper";
 
     window.history.replaceState(
       { ...window.history.state, civitumView: "newspaper", rpSlug: null, fromCivitumHome: false },
@@ -375,7 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function replaceWithHomeRoute() {
-    const route = usesFileProtocol
+    const route = usesHashRouting
       ? `${window.location.pathname}${window.location.search}`
       : "/";
 
@@ -588,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
   window.addEventListener("popstate", syncNewspaperRoute);
-  if (usesFileProtocol) window.addEventListener("hashchange", syncNewspaperRoute);
+  if (usesHashRouting) window.addEventListener("hashchange", syncNewspaperRoute);
 
   if (startedOnNewspaperRoute) {
     window.requestAnimationFrame(() => openNewspaper({ updateHistory: false }));
@@ -933,12 +936,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeShopProductStep = 1;
 
   function isShopRoute() {
-    if (usesFileProtocol) return /^#\/shop(?:\/[^/?#]+)?\/?$/.test(window.location.hash);
+    if (usesHashRouting) return /^#\/shop(?:\/[^/?#]+)?\/?$/.test(window.location.hash);
     return /\/shop(?:\/[^/?#]+)?\/?$/.test(window.location.pathname);
   }
 
   function getShopProductSlugFromRoute() {
-    const route = usesFileProtocol ? window.location.hash : window.location.pathname;
+    const route = usesHashRouting ? window.location.hash : window.location.pathname;
     const match = route.match(/\/shop\/([^/?#]+)\/?$/);
 
     if (!match) return null;
@@ -951,7 +954,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function pushShopRoute() {
-    const route = usesFileProtocol ? "#/shop" : "/shop";
+    const route = usesHashRouting ? "#/shop" : "/shop";
     window.history.pushState(
       { ...window.history.state, civitumView: "shop", fromCivitumHome: true },
       "",
@@ -961,7 +964,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function pushShopProductRoute(slug) {
     const encodedSlug = encodeURIComponent(slug);
-    const route = usesFileProtocol ? `#/shop/${encodedSlug}` : `/shop/${encodedSlug}`;
+    const route = usesHashRouting ? `#/shop/${encodedSlug}` : `/shop/${encodedSlug}`;
     const isSwitchingProduct = Boolean(getShopProductSlugFromRoute());
     const fromShopList = isSwitchingProduct
       ? Boolean(window.history.state?.fromShopList)
@@ -982,7 +985,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function replaceWithShopListRoute() {
-    const route = usesFileProtocol ? "#/shop" : "/shop";
+    const route = usesHashRouting ? "#/shop" : "/shop";
     window.history.replaceState(
       { ...window.history.state, civitumView: "shop", shopSlug: null, fromShopList: false },
       "",
@@ -1452,7 +1455,7 @@ document.addEventListener("DOMContentLoaded", () => {
   shopItem.addEventListener("click", openShop);
   shopBack.addEventListener("click", requestCloseShop);
   window.addEventListener("popstate", syncShopRoute);
-  if (usesFileProtocol) window.addEventListener("hashchange", syncShopRoute);
+  if (usesHashRouting) window.addEventListener("hashchange", syncShopRoute);
   syncShopPanelScale();
   window.addEventListener("resize", syncShopPanelScale);
 
